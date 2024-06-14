@@ -19,7 +19,7 @@ stage_0()
 LOCK_FILE=/home/temp/dry-run.lock
 LOG=/home/temp/dry-run.log
 
-if ! [[ -f $LOCK_FILE ]]
+if ! [ -f $LOCK_FILE ]
 then
   mkdir -pv /home/temp
   touch /home/temp/dry-run.log
