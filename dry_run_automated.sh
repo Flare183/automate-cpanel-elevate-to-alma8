@@ -19,13 +19,14 @@ stage_0()
 LOCK_FILE=/home/temp/dry-run.lock
 LOG=/home/temp/dry-run.log
 
-if [[ -z $LOCK_FILE ]]
+if ! [[ -f $LOCK_FILE ]]
 then
   mkdir -pv /home/temp
   touch /home/temp/dry-run.log
   touch /home/temp/dry-run.lock
   echo "Starting a new dry-run test"
   echo "Stage 0 completed" > $LOCK_FILE
+  echo "$(date) Upgrade paths, lock-file, and log-file have been setup" > $LOG
 else
    case $(cat $LOCK_FILE) in
   "Stage 1 completed")
