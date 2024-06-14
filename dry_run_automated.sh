@@ -18,18 +18,20 @@ stage_0()
 
 LOCK_FILE=/tmp/dry-run.lock
 LOG=/tmp/dry-run.log
-touch /home/temp/dry-run.log
-touch /home/temp/dry-run.lock
+touch /tmp/dry-run.lock
+touch /tmp/dry-run.log
 
-
-if [ -z $LOCK_FILE ]
+if [ -z "$(cat $LOCK_FILE)" ]
 then
   echo "Starting a new dry-run test"
   echo "Stage 0 completed" > $LOCK_FILE
   echo "$(date) Upgrade paths, lock-file, and log-file have been setup" > $LOG
-
+  echo "Please proceed with Stage 1"
 else
   case $(cat $LOCK_FILE) in
+  "Stage 0 completed")
+  echo "Please proceed with Stage 1"
+  ;;
   "Stage 1 completed")
   echo "Upgrade in process, please proceed with Stage 2"
   ;;
