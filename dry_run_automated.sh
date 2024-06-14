@@ -16,22 +16,23 @@ echo "-h|--help         Print this help message"
 stage_0()
 {
 
-LOCK_FILE=/home/temp/dry-run.lock
-LOG=/home/temp/dry-run.log
+LOCK_FILE=/tmp/dry-run.lock
+LOG=/tmp/dry-run.log
+touch /home/temp/dry-run.log
+touch /home/temp/dry-run.lock
 
-if ! [ -f $LOCK_FILE ]
+
+if [ -z $LOCK_FILE ]
 then
-  mkdir -pv /home/temp
-  touch /home/temp/dry-run.log
-  touch /home/temp/dry-run.lock
   echo "Starting a new dry-run test"
   echo "Stage 0 completed" > $LOCK_FILE
   echo "$(date) Upgrade paths, lock-file, and log-file have been setup" > $LOG
+
 else
-   case $(cat $LOCK_FILE) in
+  case $(cat $LOCK_FILE) in
   "Stage 1 completed")
-   echo "Upgrade in process, please proceed with Stage 2"
-   ;;
+  echo "Upgrade in process, please proceed with Stage 2"
+  ;;
   "Stage 2 completed")
   echo "Upgrade in process, please proceed with Stage 2"
   ;;
