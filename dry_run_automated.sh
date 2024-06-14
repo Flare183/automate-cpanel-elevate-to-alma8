@@ -2,11 +2,6 @@
 #Automating dry-run upgrade steps by Alex Silkin
 #6/13/24
 
-mkdir /home/temp
-touch /home/temp/dry-run.log
-LOG=/home/temp/dry-run.log
-touch /home/temp/dry-run.lock
-LOCK_FILE=/home/temp/dry-run.lock
 
 #Help utility
 print_usage()
@@ -21,17 +16,31 @@ echo "-h|--help         Print this help message"
 stage_0()
 {
 
- echo "Starting a new dry-run test"
- echo "Stage 0" > $LOCK_FILE
-  echo "Dry-run test is in progress, processing $(cat $LOCK_FILE)" | tee -a $LOG
- 
-      echo "Setting up cron job to run dry-run.sh after reboot" | tee -a $LOG
-      echo "@reboot /bin/bash /root/dry-run.sh" >> /var/spool/cron/root
-      echo "Stage 1" > $LOCK_FILE
-      stage1
-}
+LOCK_FILE=/home/temp/dry-run.lock
+LOG=/home/temp/dry-run.log
 
-stage1()
+if [[ -z $LOCK_FILE ]]
+then
+  mkdir -pv /home/temp
+  touch /home/temp/dry-run.log
+  touch /home/temp/dry-run.lock
+  echo "Starting a new dry-run test"
+  echo "Stage 0 completed" > $LOCK_FILE
+else
+   case $(cat $LOCK_FILE) in
+  "Stage 1 completed")
+   echo "Upgrade in process, please proceed with Stage 2"
+   ;;
+  "Stage 2 completed")
+  echo "Upgrade in process, please proceed with Stage 2"
+  ;;
+  "Stage 3 completed")
+  echo "Upgrade in process, please proceed with Stage 4"
+  ;;
+  esac
+fi
+}
+stage_1()
 {
 #Disable Exim
     echo -e "Disabling Exim...\n" | tee -a $LOG
@@ -53,7 +62,7 @@ stage1()
 }
 
 
-stage2()
+stage_2()
 {
     echo -e "Adding default MariaDB/MySQL MySQL db data and restarting the service...\n" | tee -a $LOG
 #Check for whether system is using MariaDB or MySQL, then setup default MySQL table accordingly
@@ -88,7 +97,7 @@ stage2()
     yum -y install http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-9.2009.0.el7.centos.x86_64.rpm | tee -a $LOG; yum update -y | tee -a $LOG && sleep 5 && echo "Yum updates completed, moving on to pre-flight checks" >> /etc/motd && reboot
 } 
 
-stage3()
+stage_3()
 {
      echo -e "Downloading and running LW and cPanel pre-flight checks:\n" | tee -a $LOG
      bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) | tee -a $LOG
@@ -103,7 +112,7 @@ stage3()
 
 }
 
-stage4()
+stage_4()
 {
 
 bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_leapp.sh)
@@ -112,14 +121,14 @@ bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_
 }
 
 #Stage5 waits while '/scripts/elevate-cpanel --start --non-interactive -no-leapp' runs
-stage5()
+stage_5()
 {
 ELEVATE_PROGRESS="running"
   until [ "${ELEVATE_PROGRESS}" == "done" ]
   do
      if [ "$(grep "You should upgrade this distribution manually." /tmp/elevate.log)" ] && [ "$(grep "The cPanel elevation process is currently paused" /tmp/elevate.log)" ];
      then
-     echo "Elevate is done"
+     echo "Elevate is done, proceeding with Leapp installation and upgrade"
        ELEVATE_PROGRESS="done"
     fi
   done;
@@ -164,23 +173,23 @@ while getopts ":hs:-:" opt; do
         case "${OPTARG}" in
             1)
               echo Executing stage1
-              stage1
+              stage_1
               ;;
             2)
               echo Executing stage2
-              stage2
+              stage_2
               ;;
             3)
               echo Executing stage3
-              stage3
+              stage_3
               ;;
             4)
               echo Executing stage4
-              stage4
+              stage_4
               ;;
             5)
               echo Executing stage5
-              stage5
+              stage_5
               ;;
             *)
               echo "Error: Invalid option: --$OPTARG"
@@ -220,5 +229,6 @@ while getopts ":hs:-:" opt; do
   esac
 done
 
+stage_0
 # echo -e "\nDry-run automatic steps have completed. Please manualy address the upgrade blockers" >> /etc/motd
 # cat /etc/motd
