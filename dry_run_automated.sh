@@ -127,18 +127,8 @@ bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_
 #Stage5 waits while '/scripts/elevate-cpanel --start --non-interactive -no-leapp' runs
 stage_5()
 {
-ELEVATE_PROGRESS="running"
-  until [ "${ELEVATE_PROGRESS}" == "done" ]
-  do
-     if [ "$(grep "You should upgrade this distribution manually." /tmp/elevate.log)" ] && [ "$(grep "The cPanel elevation process is currently paused" /tmp/elevate.log)" ];
-     then
-     echo "Elevate is done, proceeding with Leapp installation and upgrade"
-       ELEVATE_PROGRESS="done"
-    fi
-  done;
 
- # && \
- #    "$(grep "The cPanel elevation process is currently paused" /tmp/elevate.log)" 
+
 
 echo "cPanel elevate script completed successfully:" 
 
