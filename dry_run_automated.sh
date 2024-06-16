@@ -2,158 +2,250 @@
 #Automating dry-run upgrade steps by Alex Silkin
 #6/13/24
 
+set -eu
+declare -A STAGES
+
+LOCK_FILE=/tmp/dry-run.lock
+LOG=/tmp/dry-run.log
+PRE_FLIGHT_LOG=/tmp/lw-preflight-checks.log
+EL8_PACKAGES=/tmp/el8_packages.log
 
 #Help utility
 print_usage()
 {
-echo "This script is used to automate and accelerate the staging dry-run process"
-echo "Syntax: dry-run.sh [-s|--stage -h|--help]"
-echo "Options:"
-echo "-s|--stage        Re-run a specific stage of the dry-run script"
-echo "-h|--help         Print this help message"     
+  echo "This script is used to automate and accelerate the staging dry-run process"
+  echo "Syntax: dry-run.sh [-s|--stage -h|--help]"
+  echo "Options:"
+  echo "-s|--stage        Re-run a specific stage of the dry-run script"
+  echo "-h|--help         Print this help message"     
 }
+ 
+
+#Stage 0 is always executed firs as well as during every reboot.
+#It checks the last completed stage according to the $LOCK_FILE status and tries to proceed accordingly
 
 stage_0()
 {
 
-LOCK_FILE=/tmp/dry-run.lock
-LOG=/tmp/dry-run.log
-touch /tmp/dry-run.lock
-touch /tmp/dry-run.log
+#Setup log-files 
+touch $PRE_FLIGHT_LOG
+touch $LOCK_FILE
+touch $LOG
 
-if [ -z "$(cat $LOCK_FILE)" ]
+#If LOCK_FILE is empty then update the log, lockfile, and initiate stage_1
+
+if [[ -z "$(cat $LOCK_FILE)" ]]
 then
-  echo "Starting a new dry-run test"
+  {
+   echo "Starting a new dry-run test at $(date)"
+   echo "$(date) Upgrade paths, lock-file, and log-file have been setup"
+   echo "Proceeding with Stage 1" 
+  } >> $LOG
+
+  #Setting up cron-job so script can run after reboot.
+  echo "@reboot /bin/bash /root/dry-run.sh" >> /var/spool/cron/root
   echo "Stage 0 completed" > $LOCK_FILE
-  echo "$(date) Upgrade paths, lock-file, and log-file have been setup" > $LOG
-  echo "Please proceed with Stage 1"
+  stage_1
+
+#If upgrade is already in progress the script will run the next stage depending on $LOCK_FILE status
 else
+ echo "Upgrade already in progress..." >> /etc/motd
   case $(cat $LOCK_FILE) in
   "Stage 0 completed")
-  echo "Please proceed with Stage 1"
+  echo "Proceeding with Stage 1" >> $LOG
+  stage_1
   ;;
   "Stage 1 completed")
-  echo "Upgrade in process, please proceed with Stage 2"
+  echo "Proceeding with Stage 2" >> $LOG
+  stage_2
   ;;
   "Stage 2 completed")
-  echo "Upgrade in process, please proceed with Stage 2"
+  echo "Proceeding with Stage 3 (pre-flight checks)" >> $LOG
+  stage_3
   ;;
   "Stage 3 completed")
-  echo "Upgrade in process, please proceed with Stage 4"
+  echo "Upgrade paused, please manually resolve Stage 3 checks" >> $LOG
+  ;;
+  "Stage 4 completed")
+  echo "Continuing stage 4 after reboot $(date)" >> $LOG
+  stage_4
+  ;;
+  "Stage 5 completed")
+  echo "After the final LEAPP reboot check package output in $EL8_PACKAGES"
+  count_el8_packages
   ;;
   esac
 fi
 }
 stage_1()
-{
-#Disable Exim
-    echo -e "Disabling Exim...\n" | tee -a $LOG
-    whmapi1 configureservice service=exim enabled=0 monitored=0 | tee -a $LOG 
-    echo "Exim Disabled" | tee -a $LOG
+{ 
 
+#Disable Exim
+   {
+    echo -e "Disabling Exim...\n"
+    whmapi1 configureservice service=exim enabled=0 monitored=0
+    echo "Exim Disabled"
 #Re-create /boot/grub2/grub.cfg
-    echo -e "Rebuilding /boot/grub2/grub.cfg\n" | tee -a $LOG
-    grub2-mkconfig -o /boot/grub2/grub.cfg | tee -a $LOG
+    echo -e "Rebuilding /boot/grub2/grub.cfg\n" 
+    grub2-mkconfig -o /boot/grub2/grub.cfg
 
 #Re-install kernel files
-    yum -y reinstall kernel kernel-devel kernel-headers kernel-tools kernel-tools-libs | tee -a $LOG
-
+    yum -y reinstall kernel kernel-devel kernel-headers kernel-tools kernel-tools-libs
 #Mask plymouth-reboot service
-    systemctl mask plymouth-reboot.service | tee -a $LOG; systemctl daemon-reload | tee -a $LOG
+    systemctl mask plymouth-reboot.service
+    systemctl daemon-reload
+
+   } >> $LOG
     echo "Stage 1 completed" >> /etc/motd
-    echo "Stage 2" > $LOCK_FILE
+    echo "Stage 1 completed" > $LOCK_FILE
     reboot
-}
+
+ }
 
 
 stage_2()
 {
-    echo -e "Adding default MariaDB/MySQL MySQL db data and restarting the service...\n" | tee -a $LOG
+
+
+  echo -e "Adding default MariaDB/MySQL MySQL db data and restarting the service...\n" | tee -a $LOG
 #Check for whether system is using MariaDB or MySQL, then setup default MySQL table accordingly
-    if [[ $(mysql -V | grep "MariaDB") ]];
-     then
+  if [[ "$(mysql -V | grep -q "MariaDB")" ]];
+    then
+      {
         echo "This server uses MariaDB"
         mariadb_pid="$(systemctl status mysqld | grep "Main PID:" | awk '{print $3}')"; kill -9 "$mariadb_pid";
         mysql_install_db --user=mysql;
-     else
+      } >> $LOG
+    else
+     {
         echo "This server uses MySQL"
         echo -e '[mysqld]\nskip-grant-tables\n' > /etc/my.cnf;
         mkdir /var/lib/mysql-files;
         chown mysql: /var/lib/mysql-files;
         chmod 750 /var/lib/mysql-files;
-        echo -e "Restarting MariaDB/MySQL...\n" | tee -a $LOG
-     fi
-     
-     systemctl restart mysqld || systemctl restart mariadb
+        echo -e "Restarting MariaDB/MySQL...\n"
+     } >> $LOG 
+  fi
 
-    echo -e "Disabling LW-provided repos...\n" | tee -a $LOG
+#Restarting MySQL/MariaDB
+    systemctl restart mysqld || systemctl restart mariadb
+    {
+    echo -e "Disabling LW-provided repos...\n"
     for repo in stable-{arch,generic,noarch} system-{base,extras,updates,updates-released};
     do
-      yum-config-manager --disable "$repo" | grep -E 'repo:|enabled' | tee -a $LOG;
+      yum-config-manager --disable "$repo" | grep -E 'repo:|enabled'
     done
     
-    echo -e "Removing LW-provided centos-release...\n" | tee -a $LOG
-    rpm -e --nodeps centos-release | tee -a $LOG
-    echo "Stage 2 completed" >> /etc/motd
-    #Getting ready for stage 3
-    echo "Stage 3" > $LOCK_FILE
-
-    yum -y install http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-9.2009.0.el7.centos.x86_64.rpm | tee -a $LOG; yum update -y | tee -a $LOG && sleep 5 && echo "Yum updates completed, moving on to pre-flight checks" >> /etc/motd && reboot
+    echo -e "Removing LW-provided centos-release...\n"
+    rpm -e --nodeps centos-release
+    #Updating MOTD
+  
+    
+     #Installing official CentOS7-provided 
+     yum -y install http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-9.2009.0.el7.centos.x86_64.rpm;
+     yum update -y
+     } >> $LOG
+#Updating $LOCK_FILE and rebooting so script can move to stage_3, pre-flight checks
+    echo "Yum updates completed, moving on to pre-flight checks" >> /etc/motd
+    sleep 5 && echo "Stage 2 completed" > $LOCK_FILE
+    reboot
 } 
 
 stage_3()
 {
-     echo -e "Downloading and running LW and cPanel pre-flight checks:\n" | tee -a $LOG
-     bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) | tee -a $LOG
-     wget -O /scripts/elevate-cpanel https://raw.githubusercontent.com/cpanel/elevate/release/elevate-cpanel; chmod 700 /scripts/elevate-cpanel
-     echo -e "Disabling /var/cpanel/elevate-noc-recommendations" | tee -a $LOG
-     mv /var/cpanel/elevate-noc-recommendations{,.disabled}
-     
-     echo -e "Running cPanel Pre-flight check...\n" | tee -a $LOG
-    /scripts/elevate-cpanel --check | tee -a $LOG
-     echo -e "\nPlease manualy address the upgrade blockers" | tee -a $LOG
-     echo "Stage 4" > $LOCK_FILE
+
+#Running the LW upgrade pre-flight checks
+  {
+    echo -e "Downloading and running LW and cPanel pre-flight checks:\n"
+    bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) >> $PRE_FLIGHT_LOG
+
+#Running cPanel preflight-checks: 
+    wget -O /scripts/elevate-cpanel https://raw.githubusercontent.com/cpanel/elevate/release/elevate-cpanel
+    chmod 700 /scripts/elevate-cpanel
+    echo -e "Disabling /var/cpanel/elevate-noc-recommendations"
+    mv /var/cpanel/elevate-noc-recommendations{,.disabled}
+
+    echo -e "Running cPanel Pre-flight check...\n"
+    /scripts/elevate-cpanel --check >> $PRE_FLIGHT_LOG
+    echo -e "\nPlease manualy address the upgrade blockers in $PRE_FLIGHT_LOG"
+  } >> $LOG
+    echo "Stage 3 completed" > $LOCK_FILE
 
 }
 
+#stage_4 also runs with each script run
+#This way it automatically triggers stage_5 after 180 seconds which gives elevate-cpanel enough time to finish
 stage_4()
 {
 
-bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_leapp.sh)
-/scripts/elevate-cpanel --start --non-interactive --no-leapp
+#Checks whether pre-flight scripts have already run and proceeds with elevate-cpanel
+#This assumes the user has already manually addressed LW Preflight and cPanel Preflight warnings & errors
+#If preflight errors have not been addressed the elevate-cpanel script will error out
+
+if [[ "$(cat $LOCK_FILE)" == "Stage 3 completed" ]]
+then
+ {
+  echo "Installing Liquid Web post-leapp scripts..."
+  bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_leapp.sh) 
+ } >> $LOG
+
+echo "Stage 4 completed" > $LOCK_FILE; /scripts/elevate-cpanel --start --non-interactive --no-leapp
+
+elif [[ "$(cat $LOCK_FILE)" == "Stage 4 completed" ]]
+then
+  sleep 150
+  stage_5
+else
+echo "Stage 4 should not be running yet" >> $LOG
+echo "Exiting" >> $LOG
+exit 1
+fi
 
 }
 
-#Stage5 waits while '/scripts/elevate-cpanel --start --non-interactive -no-leapp' runs
+#Runs after cPanel elevate-cpanel script
 stage_5()
 {
 
-
-
-echo "cPanel elevate script completed successfully:" 
-
+#Setting up Alma8 elevate repo + leapp upgrades packages
+{
 echo "Installing AlmaLinux8 elevate repo:"
-
 yum install -y https://repo.almalinux.org/elevate/elevate-release-latest-el7.noarch.rpm
-
 echo "Installing leapp-upgrade and leapp-data-almalinux"
-
 yum install -y leapp-upgrade leapp-data-almalinux
 
-echo "Setting up /var/log/leaap and Leapp Answerfile"
-
+#Setting up Leapp Answer file and logs
+echo "Setting up /var/log/leapp and Leapp Answerfile"
 mkdir -pv /var/log/leapp
 touch /var/log/leapp/answerfile
+}  >> $LOG
+
+
+
 echo '[remove_pam_pkcs11_module_check]' >> /var/log/leapp/answerfile
-leapp answer --section remove_pam_pkcs11_module_check.confirm=True
+leapp answer --section remove_pam_pkcs11_module_check.confirm=True >> $LOG 
+
+#Removing kernel-devel packages
 rpm -q kernel-devel &>/dev/null && rpm -q kernel-devel | xargs rpm -e --nodeps
 
+
+#Setting LEAPP_OVL_SIZE=3000 and running Leapp upgrade. Updating $LOCK_FILE
 echo "Setting LEAPP_OVL_SIZE=3000"
 export LEAPP_OVL_SIZE=3000
 
-echo "Beginning LEAPP Upgrade":
+echo "Beginning LEAPP Upgrade at $(date)": >> $LOG
+echo "Stage 5 completed" > $LOCK_FILE; leapp upgrade --reboot
 
-leapp upgrade --reboot
+}
+
+
+#This function is expected to run during/after LEAPP upgrade reboots
+count_el8_packages()
+{
+
+rpm -qa | grep -v cpanel | grep -Po 'el[78]' \
+ | sort | uniq -c | sort -rn;echo;rpm -qa | grep \-v cpanel \
+ | grep 'el7' | sort | uniq | sort -rn | nl > $EL8_PACKAGES
 
 }
 
@@ -223,6 +315,9 @@ while getopts ":hs:-:" opt; do
   esac
 done
 
+
+
 stage_0
+stage_4
 # echo -e "\nDry-run automatic steps have completed. Please manualy address the upgrade blockers" >> /etc/motd
 # cat /etc/motd
