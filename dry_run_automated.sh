@@ -3,7 +3,6 @@
 #6/13/24
 
 set -eu
-declare -A STAGES
 
 LOCK_FILE=/tmp/dry-run.lock
 LOG=/tmp/dry-run.log
