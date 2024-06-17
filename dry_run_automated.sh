@@ -34,7 +34,7 @@ touch $EL8_PACKAGES
 
 #If LOCK_FILE is empty then update the log, lockfile, and initiate stage_1
 
-if ! [[ -s ${LOCK_FILE} ]]
+if [[ ! -s ${LOCK_FILE} ]]
 then
 {
  #  bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) 2>&1 | tee -a $LOG
@@ -102,13 +102,14 @@ stage_1()
 
 stage_2()
 {
+  sleep 25
   echo -e "Adding default MariaDB/MySQL MySQL db data and restarting the service...\n" 2>&1 | tee -a $LOG
 #Check for whether system is using MariaDB or MySQL, then setup default MySQL table accordingly
   if [[ $(mysql -V | grep "MariaDB") ]]
   then
       echo "This server uses MariaDB" 2>&1 | tee -a $LOG
       mariadb_pid="$(systemctl status mysqld | \
-       grep "Main PID:" | awk '{print $3}')"; kill -9 "$mariadb_pid";
+      grep "Main PID:" | awk '{print $3}')"; kill -9 "$mariadb_pid";
       mysql_install_db --user=mysql  2>&1 | tee -a $LOG
     else
         echo "This server uses MySQL"  2>&1 | tee -a $LOG
