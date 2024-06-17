@@ -108,7 +108,7 @@ stage_2()
 #Check for whether system is using MariaDB or MySQL, then setup default MySQL table accordingly
   if [[ $(mysql -V | grep "MariaDB") ]]
   then
-      echo "This server uses MariaDB"
+      echo "This server uses MariaDB" 2>&1 | tee -a $LOG
       mariadb_pid="$(systemctl status mysqld | \
        grep "Main PID:" | awk '{print $3}')"; kill -9 "$mariadb_pid";
       mysql_install_db --user=mysql  2>&1 | tee -a $LOG
