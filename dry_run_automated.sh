@@ -16,7 +16,7 @@ print_usage()
   echo "Syntax: dry-run.sh [-s|--stage -h|--help]"
   echo "Options:"
   echo "-s|--stage        Re-run a specific stage of the dry-run script"
-  echo "-h|--help         Print this help message"     
+  echo "-h|--help         Print this help message"  
 }
  
 
@@ -106,14 +106,15 @@ stage_2()
 {
 
 
-  echo -e "Adding default MariaDB/MySQL MySQL db data and restarting the service...\n" | tee -a $LOG
+  echo -e "Adding default MariaDB/MySQL MySQL db data and restarting the service...\n" >> $LOG
 #Check for whether system is using MariaDB or MySQL, then setup default MySQL table accordingly
   if [[ "$(mysql -V | grep -q "MariaDB")" ]];
-    then
-      {
-        echo "This server uses MariaDB"
-        mariadb_pid="$(systemctl status mysqld | grep "Main PID:" | awk '{print $3}')"; kill -9 "$mariadb_pid";
-        mysql_install_db --user=mysql;
+  then
+    {
+      echo "This server uses MariaDB"
+      mariadb_pid="$(systemctl status mysqld | \
+       grep "Main PID:" | awk '{print $3}')"; kill -9 "$mariadb_pid";
+      mysql_install_db --user=mysql;
       } >> $LOG
     else
      {
@@ -207,34 +208,40 @@ stage_5()
 {
 
 #Setting up Alma8 elevate repo + leapp upgrades packages
+if ! [[ "$(cat $LOCK_FILE)" == "Stage 4 completed" ]]
+then
+  echo "Error: '/scripts/elevate-cpanel --start --non-interactive --no-leapp' has not run yet"
+  echo "Exiting..." 
+  exit 1
+else
 {
-echo "Installing AlmaLinux8 elevate repo:"
-yum install -y https://repo.almalinux.org/elevate/elevate-release-latest-el7.noarch.rpm
-echo "Installing leapp-upgrade and leapp-data-almalinux"
-yum install -y leapp-upgrade leapp-data-almalinux
+  echo "Beginnig Stage 5 of the dry-run test"
+  echo "Installing AlmaLinux8 elevate repo:"
+  yum install -y https://repo.almalinux.org/elevate/elevate-release-latest-el7.noarch.rpm
+  echo "Installing leapp-upgrade and leapp-data-almalinux"
+  yum install -y leapp-upgrade leapp-data-almalinux
 
 #Setting up Leapp Answer file and logs
-echo "Setting up /var/log/leapp and Leapp Answerfile"
-mkdir -pv /var/log/leapp
-touch /var/log/leapp/answerfile
-}  >> $LOG
+  echo "Setting up /var/log/leapp and Leapp Answerfile"
+  mkdir -pv /var/log/leapp
+  touch /var/log/leapp/answerfile
+} >> $LOG
 
 
-
-echo '[remove_pam_pkcs11_module_check]' >> /var/log/leapp/answerfile
-leapp answer --section remove_pam_pkcs11_module_check.confirm=True >> $LOG 
+  echo '[remove_pam_pkcs11_module_check]' >> /var/log/leapp/answerfile
+  leapp answer --section remove_pam_pkcs11_module_check.confirm=True >> $LOG 
 
 #Removing kernel-devel packages
-rpm -q kernel-devel &>/dev/null && rpm -q kernel-devel | xargs rpm -e --nodeps
+  rpm -q kernel-devel &>/dev/null && rpm -q kernel-devel | xargs rpm -e --nodeps
 
 
 #Setting LEAPP_OVL_SIZE=3000 and running Leapp upgrade. Updating $LOCK_FILE
-echo "Setting LEAPP_OVL_SIZE=3000"
-export LEAPP_OVL_SIZE=3000
+  echo "Setting LEAPP_OVL_SIZE=3000"
+  export LEAPP_OVL_SIZE=3000
 
-echo "Beginning LEAPP Upgrade at $(date)": >> $LOG
-echo "Stage 5 completed" > $LOCK_FILE; leapp upgrade --reboot
-
+  echo "Beginning LEAPP Upgrade at $(date)": >> $LOG
+  echo "Stage 5 completed" > $LOCK_FILE; leapp upgrade --reboot
+fi
 }
 
 
@@ -242,9 +249,9 @@ echo "Stage 5 completed" > $LOCK_FILE; leapp upgrade --reboot
 count_el8_packages()
 {
 
-rpm -qa | grep -v cpanel | grep -Po 'el[78]' \
- | sort | uniq -c | sort -rn;echo;rpm -qa | grep \-v cpanel \
- | grep 'el7' | sort | uniq | sort -rn | nl > $EL8_PACKAGES
+  rpm -qa | grep -v cpanel | grep -Po 'el[78]' \
+  | sort | uniq -c | sort -rn;echo;rpm -qa | grep -v cpanel \
+  | grep 'el7' | sort | uniq | sort -rn | nl > $EL8_PACKAGES
 
 }
 
@@ -284,7 +291,8 @@ while getopts ":hs:-:" opt; do
         case "${OPTARG}" in
             help)
                 print_usage
-                exit;;
+                exit 0
+                ;;
             stage)
                 echo "Stage"
                 case "${OPTARG}" in
@@ -314,9 +322,5 @@ while getopts ":hs:-:" opt; do
   esac
 done
 
-
-
+#Stage 0 runs first to initiate Stage 1
 stage_0
-stage_4
-# echo -e "\nDry-run automatic steps have completed. Please manualy address the upgrade blockers" >> /etc/motd
-# cat /etc/motd
