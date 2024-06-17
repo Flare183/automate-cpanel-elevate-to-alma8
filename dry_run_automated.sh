@@ -263,6 +263,10 @@ while getopts ":hs:-:" opt; do
       exit;;
     s) #Select a specific stage of the script
         case "${OPTARG}" in
+            0)
+              echo Executing stage1
+              stage_0
+              ;; 
             1)
               echo Executing stage1
               stage_1
