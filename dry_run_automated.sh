@@ -106,7 +106,7 @@ stage_2()
 {
   echo -e "Adding default MariaDB/MySQL MySQL db data and restarting the service...\n" 2>&1 | tee -a $LOG
 #Check for whether system is using MariaDB or MySQL, then setup default MySQL table accordingly
-  if [[ "$(mysql -V | grep "MariaDB")" ]];
+  if [[ $(mysql -V | grep "MariaDB") ]]
   then
       echo "This server uses MariaDB"
       mariadb_pid="$(systemctl status mysqld | \
