@@ -160,7 +160,7 @@ stage_3()
     bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) 2>&1 | tee -a $PRE_FLIGHT_LOG
 
 #Running cPanel preflight-checks: 
-    wget -O /scripts/elevate-cpanel https://raw.githubusercontent.com/cpanel/elevate/release/elevate-cpanel 2>&1 | tee -a $LOG
+    wget -O /scripts/elevate-cpanel https://raw.githubusercontent.com/cpanel/elevate/release/elevate-cpanel
     chmod 700 /scripts/elevate-cpanel
     echo -e "Disabling /var/cpanel/elevate-noc-recommendations" >> $LOG
     mv /var/cpanel/elevate-noc-recommendations{,.disabled}  2>&1 | tee -a $LOG
