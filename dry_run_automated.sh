@@ -36,22 +36,21 @@ touch $EL8_PACKAGES
 
 if [[ -z "$(cat $LOCK_FILE)" ]]
 then
-  {
+  
    bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) >> $PRE_FLIGHT_LOG
    if [[ $(grep -q "cpanel.lisc missing" $PRE_FLIGHT_LOG) ]]
    then
-     echo "ERROR: This staging server is missing the cPanel license"
+     echo "ERROR: This staging server is missing the cPanel license" 2>&1 | tee -a $LOG
      exit 1
    fi
-   echo "Starting a new dry-run test at $(date)"
-   echo "$(date) Upgrade paths, lock-file, and log-file have been setup"
-   echo "Proceeding with Stage 1" 
-  } >> $LOG
-
+   echo "Starting a new dry-run test at $(date)"  2>&1 | tee -a $LOG
+   echo "$(date) Upgrade paths, lock-file, and log-file have been setup"  2>&1 | tee -a $LOG
+   echo "Proceeding with Stage 1"  2>&1 | tee -a $LOG
   #Setting up cron-job so script can run after reboot.
   echo "@reboot /bin/bash /root/dry-run.sh" >> /var/spool/cron/root
   echo "Stage 0 completed" > $LOCK_FILE
   stage_1
+
 #If upgrade is already in progress the script will run the next stage depending on $LOCK_FILE status
 else
  echo "Upgrade already in progress..." >> /etc/motd
@@ -86,21 +85,19 @@ stage_1()
 { 
 
 #Disable Exim
-   {
-    echo -e "Disabling Exim...\n"
-    whmapi1 configureservice service=exim enabled=0 monitored=0
-    echo "Exim Disabled"
+    echo -e "Disabling Exim...\n"  2>&1 | tee -a $LOG
+    whmapi1 configureservice service=exim enabled=0 monitored=0  2>&1 | tee -a $LOG
+    echo "Exim Disabled"  2>&1 | tee -a $LOG
 #Re-create /boot/grub2/grub.cfg
-    echo -e "Rebuilding /boot/grub2/grub.cfg\n" 
-    grub2-mkconfig -o /boot/grub2/grub.cfg
+    echo -e "Rebuilding /boot/grub2/grub.cfg\n"  2>&1 | tee -a $LOG
+    grub2-mkconfig -o /boot/grub2/grub.cfg 2>&1 | tee -a $LOG
 
 #Re-install kernel files
-    yum -y reinstall kernel kernel-devel kernel-headers kernel-tools kernel-tools-libs
+    yum -y reinstall kernel kernel-devel kernel-headers kernel-tools kernel-tools-libs  2>&1 | tee -a $LOG
 #Mask plymouth-reboot service
-    systemctl mask plymouth-reboot.service
+    systemctl mask plymouth-reboot.service  2>&1 | tee -a $LOG
     systemctl daemon-reload
 
-   } >> $LOG
     echo "Stage 1 completed" >> /etc/motd
     echo "Stage 1 completed" > $LOCK_FILE
     reboot
@@ -108,27 +105,24 @@ stage_1()
 
 stage_2()
 {
-  echo -e "Adding default MariaDB/MySQL MySQL db data and restarting the service...\n" >> $LOG
+  echo -e "Adding default MariaDB/MySQL MySQL db data and restarting the service...\n" 2>&1 | tee -a $LOG
 #Check for whether system is using MariaDB or MySQL, then setup default MySQL table accordingly
   if [[ "$(mysql -V | grep "MariaDB")" ]];
   then
-    {
       echo "This server uses MariaDB"
       mariadb_pid="$(systemctl status mysqld | \
        grep "Main PID:" | awk '{print $3}')"; kill -9 "$mariadb_pid";
-      mysql_install_db --user=mysql;
-      } >> $LOG
+      mysql_install_db --user=mysql  2>&1 | tee -a $LOG
     else
-     {
-        echo "This server uses MySQL"
+        echo "This server uses MySQL"  2>&1 | tee -a $LOG
         echo -e '[mysqld]\nskip-grant-tables\n' > /etc/my.cnf
         mkdir /var/lib/mysql-files
         chown mysql: /var/lib/mysql-files
         chmod 750 /var/lib/mysql-files
         echo -e "Restarting MariaDB/MySQL...\n"
-     } >> $LOG 
   fi
 #Restarting MySQL/MariaDB
+    echo "Restarting MySQL/MariaDB"   2>&1 | tee -a $LOG
     systemctl restart mysqld || systemctl restart mariadb
 #Disabling LW-provide repositories
   {
@@ -212,22 +206,19 @@ then
   echo "Exiting..." 
   exit 1
 else
-{
-  echo "Beginnig Stage 5 of the dry-run test"
-  echo "Installing AlmaLinux8 elevate repo:"
-  yum install -y https://repo.almalinux.org/elevate/elevate-release-latest-el7.noarch.rpm
-  echo "Installing leapp-upgrade and leapp-data-almalinux"
-  yum install -y leapp-upgrade leapp-data-almalinux
+  echo "Beginnig Stage 5 of the dry-run test" 2>&1 | tee -a $LOG
+  echo "Installing AlmaLinux8 elevate repo:" 2>&1 | tee -a $LOG
+  yum install -y https://repo.almalinux.org/elevate/elevate-release-latest-el7.noarch.rpm 2>&1 | tee -a $LOG
+  echo "Installing leapp-upgrade and leapp-data-almalinux" 2>&1 | tee -a $LOG
+  yum install -y leapp-upgrade leapp-data-almalinux 2>&1 | tee -a $LOG
 
 #Setting up Leapp Answer file and logs
-  echo "Setting up /var/log/leapp and Leapp Answerfile"
-  mkdir -pv /var/log/leapp
+  echo "Setting up /var/log/leapp and Leapp Answerfile" 2>&1 | tee -a $LOG
+  mkdir -pv /var/log/leapp 2>&1 | tee -a $LOG
   touch /var/log/leapp/answerfile
-} >> $LOG
-
 
   echo '[remove_pam_pkcs11_module_check]' >> /var/log/leapp/answerfile
-  leapp answer --section remove_pam_pkcs11_module_check.confirm=True >> $LOG 
+  leapp answer --section remove_pam_pkcs11_module_check.confirm=True 2>&1 | tee -a $LOG
 
 #Removing kernel-devel packages
   rpm -q kernel-devel &>/dev/null && rpm -q kernel-devel | xargs rpm -e --nodeps
@@ -237,7 +228,7 @@ else
   echo "Setting LEAPP_OVL_SIZE=3000"
   export LEAPP_OVL_SIZE=3000
 
-  echo "Beginning LEAPP Upgrade at $(date)": >> $LOG
+  echo "Beginning LEAPP Upgrade at $(date)": 2>&1 | tee -a $LOG
   echo "Stage 5 completed" > $LOCK_FILE; leapp upgrade --reboot
 fi
 }
