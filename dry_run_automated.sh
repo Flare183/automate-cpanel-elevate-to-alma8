@@ -129,7 +129,6 @@ stage_2()
     done
     echo -e "Removing LW-provided centos-release...\n" 2>&1 | tee -a $LOG
     rpm -e --nodeps centos-release
-    
      #Installing CentOS7-provided centos-release and updating packages
     yum -y install http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-9.2009.0.el7.centos.x86_64.rpm 2>&1 | tee -a $LOG
     yum update -y 2>&1 | tee -a $LOG
@@ -142,16 +141,16 @@ stage_2()
 stage_3()
 {
 #Running the LW upgrade pre-flight checks
-    echo -e "Downloading and running LW and cPanel pre-flight checks:\n" >> $LOG
+    echo -e "Downloading and running LW and cPanel pre-flight checks:\n" 2>&1 | tee -a $LOG
     bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) 2>&1 | tee -a $PRE_FLIGHT_LOG
 #Running cPanel preflight-checks: 
-    wget -Onv /scripts/elevate-cpanel https://raw.githubusercontent.com/cpanel/elevate/release/elevate-cpanel >> $LOG
+    wget -Oq /scripts/elevate-cpanel https://raw.githubusercontent.com/cpanel/elevate/release/elevate-cpanel >> $LOG
     chmod 700 /scripts/elevate-cpanel
-    echo -e "Disabling /var/cpanel/elevate-noc-recommendations" >> $LOG
-    mv /var/cpanel/elevate-noc-recommendations{,.disabled} >> $LOG
-    echo -e "Running cPanel Pre-flight check...\n" >> $LOG
+    echo -e "Disabling /var/cpanel/elevate-noc-recommendations" 2>&1 | tee -a $LOG
+    mv /var/cpanel/elevate-noc-recommendations{,.disabled} 2>&1 | tee -a $LOG
+    echo -e "Running cPanel Pre-flight check...\n" 2>&1 | tee -a $LOG
     /scripts/elevate-cpanel --check 2>&1 | tee -a $PRE_FLIGHT_LOG
-    echo -e "\nPlease manualy address the upgrade blockers in $PRE_FLIGHT_LOG" >> $LOG
+    echo -e "\nPlease manualy address the upgrade blockers in $PRE_FLIGHT_LOG" 2>&1 | tee -a $LOG
     echo "Stage 3 completed" > $LOCK_FILE
 }
 
