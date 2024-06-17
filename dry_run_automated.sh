@@ -82,7 +82,6 @@ fi
 }
 stage_1()
 { 
-
 #Disable Exim
     echo -e "Disabling Exim...\n"  2>&1 | tee -a $LOG
     whmapi1 configureservice service=exim enabled=0 monitored=0  2>&1 | tee -a $LOG
@@ -96,7 +95,6 @@ stage_1()
 #Mask plymouth-reboot service
     systemctl mask plymouth-reboot.service  2>&1 | tee -a $LOG
     systemctl daemon-reload
-
     echo "Stage 1 completed" >> /etc/motd
     echo "Stage 1 completed" > $LOCK_FILE
     reboot
@@ -143,12 +141,9 @@ stage_2()
 
 stage_3()
 {
-
 #Running the LW upgrade pre-flight checks
-
     echo -e "Downloading and running LW and cPanel pre-flight checks:\n" >> $LOG
     bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) 2>&1 | tee -a $PRE_FLIGHT_LOG
-
 #Running cPanel preflight-checks: 
     wget -Onv /scripts/elevate-cpanel https://raw.githubusercontent.com/cpanel/elevate/release/elevate-cpanel >> $LOG
     chmod 700 /scripts/elevate-cpanel
@@ -158,7 +153,6 @@ stage_3()
     /scripts/elevate-cpanel --check 2>&1 | tee -a $PRE_FLIGHT_LOG
     echo -e "\nPlease manualy address the upgrade blockers in $PRE_FLIGHT_LOG" >> $LOG
     echo "Stage 3 completed" > $LOCK_FILE
-
 }
 
 #stage_4 also runs with each script run
