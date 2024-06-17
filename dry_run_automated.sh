@@ -37,7 +37,7 @@ touch $EL8_PACKAGES
 if [[ -z "$(cat $LOCK_FILE)" ]]
 then
   
-   bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) >> $PRE_FLIGHT_LOG
+   bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) 2>&1 | tee -a $LOG
    if [[ $(grep -q "cpanel.lisc missing" "$PRE_FLIGHT_LOG") ]]
    then
      echo "ERROR: This staging server is missing the cPanel license" 2>&1 | tee -a $LOG
@@ -253,7 +253,7 @@ while getopts ":hs:-:" opt; do
     s) #Select a specific stage of the script
         case "${OPTARG}" in
             0)
-              echo Executing stage1
+              echo Executing stage0
               stage_0
               ;; 
             1)
