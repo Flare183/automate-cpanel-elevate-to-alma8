@@ -37,7 +37,7 @@ touch $EL8_PACKAGES
 if [[ -z "$(cat $LOCK_FILE)" ]]
 then
   {
-   bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_leapp.sh) >> $PRE_FLIGHT_LOG
+   bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) >> $PRE_FLIGHT_LOG
    if [[ $(grep -q "cpanel.lisc missing" $PRE_FLIGHT_LOG) ]]
    then
      echo "ERROR: This staging server is missing the cPanel license"
@@ -121,19 +121,19 @@ stage_2()
     else
      {
         echo "This server uses MySQL"
-        echo -e '[mysqld]\nskip-grant-tables\n' > /etc/my.cnf;
-        mkdir /var/lib/mysql-files;
-        chown mysql: /var/lib/mysql-files;
-        chmod 750 /var/lib/mysql-files;
+        echo -e '[mysqld]\nskip-grant-tables\n' > /etc/my.cnf
+        mkdir /var/lib/mysql-files
+        chown mysql: /var/lib/mysql-files
+        chmod 750 /var/lib/mysql-files
         echo -e "Restarting MariaDB/MySQL...\n"
      } >> $LOG 
   fi
-
 #Restarting MySQL/MariaDB
     systemctl restart mysqld || systemctl restart mariadb
-    {
+#Disabling LW-provide repositories
+  {
     echo -e "Disabling LW-provided repos...\n"
-    for repo in stable-{arch,generic,noarch} system-{base,extras,updates,updates-released};
+    for repo in stable-{arch,generic,noarch} system-{base,extras,updates,updates-released}
     do
       yum-config-manager --disable "$repo" | grep -E 'repo:|enabled'
     done
@@ -142,9 +142,9 @@ stage_2()
     rpm -e --nodeps centos-release
     
      #Installing CentOS7-provided centos-release and updating packages
-     yum -y install http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-9.2009.0.el7.centos.x86_64.rpm;
-     yum update -y
-     } >> $LOG
+    yum -y install http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-9.2009.0.el7.centos.x86_64.rpm
+    yum update -y
+  } >> $LOG
 #Updating $LOCK_FILE and rebooting so script can move to stage_3, pre-flight checks
     echo "Yum updates completed, moving on to pre-flight checks" >> /etc/motd
     sleep 5 && echo "Stage 2 completed" > $LOCK_FILE
@@ -155,20 +155,19 @@ stage_3()
 {
 
 #Running the LW upgrade pre-flight checks
-  {
-    echo -e "Downloading and running LW and cPanel pre-flight checks:\n"
+
+    echo -e "Downloading and running LW and cPanel pre-flight checks:\n" >> $LOG
     bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) >> $PRE_FLIGHT_LOG
 
 #Running cPanel preflight-checks: 
-    wget -O /scripts/elevate-cpanel https://raw.githubusercontent.com/cpanel/elevate/release/elevate-cpanel
+    wget -O /scripts/elevate-cpanel https://raw.githubusercontent.com/cpanel/elevate/release/elevate-cpanel >> $LOG
     chmod 700 /scripts/elevate-cpanel
-    echo -e "Disabling /var/cpanel/elevate-noc-recommendations"
-    mv /var/cpanel/elevate-noc-recommendations{,.disabled}
+    echo -e "Disabling /var/cpanel/elevate-noc-recommendations" >> $LOG
+    mv /var/cpanel/elevate-noc-recommendations{,.disabled} >> $LOG
 
-    echo -e "Running cPanel Pre-flight check...\n"
+    echo -e "Running cPanel Pre-flight check...\n" >> $LOG
     /scripts/elevate-cpanel --check >> $PRE_FLIGHT_LOG
-    echo -e "\nPlease manualy address the upgrade blockers in $PRE_FLIGHT_LOG"
-  } >> $LOG
+    echo -e "\nPlease manualy address the upgrade blockers in $PRE_FLIGHT_LOG" >> $LOG
     echo "Stage 3 completed" > $LOCK_FILE
 
 }
