@@ -38,7 +38,7 @@ if [[ -z "$(cat $LOCK_FILE)" ]]
 then
   {
    bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_leapp.sh) >> $PRE_FLIGHT_LOG
-   if [[ $(grep -q "cpanel.lisc $PRE_FLIGHT_LOG") ]]
+   if [[ $(grep -q "cpanel.lisc missing" $PRE_FLIGHT_LOG) ]]
    then
      echo "ERROR: This staging server is missing the cPanel license"
      exit 1
