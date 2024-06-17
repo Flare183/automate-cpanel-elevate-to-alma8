@@ -124,20 +124,20 @@ stage_2()
     echo "Restarting MySQL/MariaDB"   2>&1 | tee -a $LOG
     systemctl restart mysqld || systemctl restart mariadb
 #Disabling LW-provide repositories
-  {
-    echo -e "Disabling LW-provided repos...\n"
+  
+    echo -e "Disabling LW-provided repos...\n" 2>&1 | tee -a $LOG
     for repo in stable-{arch,generic,noarch} system-{base,extras,updates,updates-released}
     do
-      yum-config-manager --disable "$repo" | grep -E 'repo:|enabled'
+      yum-config-manager --disable "$repo" | grep -E 'repo:|enabled' 2>&1 | tee -a $LOG
     done
     
-    echo -e "Removing LW-provided centos-release...\n"
+    echo -e "Removing LW-provided centos-release...\n" 2>&1 | tee -a $LOG
     rpm -e --nodeps centos-release
     
      #Installing CentOS7-provided centos-release and updating packages
-    yum -y install http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-9.2009.0.el7.centos.x86_64.rpm
-    yum update -y
-  } >> $LOG
+    yum -y install http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-9.2009.0.el7.centos.x86_64.rpm 2>&1 | tee -a $LOG
+    yum update -y 2>&1 | tee -a $LOG
+
 #Updating $LOCK_FILE and rebooting so script can move to stage_3, pre-flight checks
     echo "Yum updates completed, moving on to pre-flight checks" >> /etc/motd
     sleep 5 && echo "Stage 2 completed" > $LOCK_FILE
