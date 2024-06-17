@@ -307,4 +307,3 @@ done
 
 #Stage 0 runs first to initiate Stage 1
 stage_0
-count_el8_packages
