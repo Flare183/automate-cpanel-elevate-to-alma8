@@ -36,13 +36,12 @@ touch $EL8_PACKAGES
 
 if [[ -z "$(cat $LOCK_FILE)" ]]
 then
-  
-   bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) 2>&1 | tee -a $LOG
-   if [[ $(grep -q "cpanel.lisc missing" "$PRE_FLIGHT_LOG") ]]
-   then
-     echo "ERROR: This staging server is missing the cPanel license" 2>&1 | tee -a $LOG
-     exit 1
-   fi
+{
+ #  bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) 2>&1 | tee -a $LOG
+  # if [[ $(grep -q "cpanel.lisc missing" "$PRE_FLIGHT_LOG") ]]
+  # echo "ERROR: This staging server is missing the cPanel license" 2>&1 | tee -a $LOG
+  #  exit 1
+  # fi
    echo "Starting a new dry-run test at $(date)"  2>&1 | tee -a $LOG
    echo "$(date) Upgrade paths, lock-file, and log-file have been setup"  2>&1 | tee -a $LOG
    echo "Proceeding with Stage 1"  2>&1 | tee -a $LOG
@@ -50,7 +49,7 @@ then
   echo "@reboot /bin/bash /root/dry-run.sh" >> /var/spool/cron/root
   echo "Stage 0 completed" > $LOCK_FILE
   stage_1
-
+}
 #If upgrade is already in progress the script will run the next stage depending on $LOCK_FILE status
 else
  echo "Upgrade already in progress..." >> /etc/motd
@@ -317,3 +316,4 @@ done
 
 #Stage 0 runs first to initiate Stage 1
 stage_0
+count_el8_packages
