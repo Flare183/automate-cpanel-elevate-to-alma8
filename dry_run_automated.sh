@@ -34,7 +34,7 @@ touch $EL8_PACKAGES
 
 #If LOCK_FILE is empty then update the log, lockfile, and initiate stage_1
 
-if [[ -z "$(cat $LOCK_FILE)" ]]
+if ! [[ -s ${LOCK_FILE} ]]
 then
 {
  #  bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) 2>&1 | tee -a $LOG
