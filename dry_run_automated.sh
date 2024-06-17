@@ -30,12 +30,19 @@ stage_0()
 touch $PRE_FLIGHT_LOG
 touch $LOCK_FILE
 touch $LOG
+touch $EL8_PACKAGES
 
 #If LOCK_FILE is empty then update the log, lockfile, and initiate stage_1
 
 if [[ -z "$(cat $LOCK_FILE)" ]]
 then
   {
+   bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_leapp.sh) >> $PRE_FLIGHT_LOG
+   if [[ $(grep -q "cpanel.lisc $PRE_FLIGHT_LOG") ]]
+   then
+     echo "ERROR: This staging server is missing the cPanel license"
+     exit 1
+   fi
    echo "Starting a new dry-run test at $(date)"
    echo "$(date) Upgrade paths, lock-file, and log-file have been setup"
    echo "Proceeding with Stage 1" 
@@ -45,7 +52,6 @@ then
   echo "@reboot /bin/bash /root/dry-run.sh" >> /var/spool/cron/root
   echo "Stage 0 completed" > $LOCK_FILE
   stage_1
-
 #If upgrade is already in progress the script will run the next stage depending on $LOCK_FILE status
 else
  echo "Upgrade already in progress..." >> /etc/motd
@@ -98,14 +104,10 @@ stage_1()
     echo "Stage 1 completed" >> /etc/motd
     echo "Stage 1 completed" > $LOCK_FILE
     reboot
-
  }
-
 
 stage_2()
 {
-
-
   echo -e "Adding default MariaDB/MySQL MySQL db data and restarting the service...\n" >> $LOG
 #Check for whether system is using MariaDB or MySQL, then setup default MySQL table accordingly
   if [[ "$(mysql -V | grep -q "MariaDB")" ]];
@@ -138,10 +140,8 @@ stage_2()
     
     echo -e "Removing LW-provided centos-release...\n"
     rpm -e --nodeps centos-release
-    #Updating MOTD
-  
     
-     #Installing official CentOS7-provided 
+     #Installing CentOS7-provided centos-release and updating packages
      yum -y install http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-9.2009.0.el7.centos.x86_64.rpm;
      yum update -y
      } >> $LOG
