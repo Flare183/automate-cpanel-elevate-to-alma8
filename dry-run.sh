@@ -169,13 +169,14 @@ leapp upgrade --reboot
  
 count_el8_packages()
 {
+#Counting EL7/EL8 packages
   rpm -qa | grep -v cpanel | grep -Po 'el[78]' \
   | sort | uniq -c | sort -rn;echo;rpm -qa | grep -v cpanel \
   | grep 'el7' | sort | uniq | sort -rn | nl > $EL8_PACKAGES >&1
 }
 
 #Check whether any options were passed to the script
-while getopts ":h:ps:-:" opt; do
+while getopts ":hps:-:" opt; do
   case $opt in
     h)
       print_usage
@@ -187,23 +188,23 @@ while getopts ":h:ps:-:" opt; do
     s) #Select a specific stage of the script
         case "${OPTARG}" in
             1)
-              echo Executing stage1
+              echo "Executing Stage 1"
               stage_1
               ;;
             2)
-              echo Executing stage2
+              echo "Executing Stage 2"
               stage_2
               ;;
             3)
-              echo Executing stage3
+              echo "Executing Stage 3 (Pre-flight checks)" 
               stage_3
               ;;
             4)
-              echo Executing stage4
+              echo "Executing Stage 4 (/scripts/elevate-cpanel --start --non-interactive --no-leapp)"
               stage_4
               ;;
             5)
-              echo Executing stage5
+              echo "Executing Stage 5 (Leapp Setup and Leapp Upgrade)"
               stage_5
               ;;
             *)
