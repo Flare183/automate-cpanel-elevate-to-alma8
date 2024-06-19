@@ -143,25 +143,28 @@ bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_
 #Stage5 waits while '/scripts/elevate-cpanel --start --non-interactive -no-leapp' runs
 stage_5()
 {
+#Setting up Alma8 elevate repo + leapp upgrades packages
 echo "cPanel elevate script completed successfully:" 
 echo "Installing AlmaLinux8 elevate repo:"
 yum install -y https://repo.almalinux.org/elevate/elevate-release-latest-el7.noarch.rpm
 echo "Installing leapp-upgrade and leapp-data-almalinux"
 yum install -y leapp-upgrade leapp-data-almalinux
+
+#Setting up Leapp Answer file and logs
 echo "Setting up /var/log/leaap and Leapp Answerfile"
 mkdir -pv /var/log/leapp
 touch /var/log/leapp/answerfile
 echo '[remove_pam_pkcs11_module_check]' >> /var/log/leapp/answerfile
 leapp answer --section remove_pam_pkcs11_module_check.confirm=True
+
+#Removing kernel-devel packages
 rpm -q kernel-devel &>/dev/null && rpm -q kernel-devel | xargs rpm -e --nodeps
 
+#Setting LEAPP_OVL_SIZE=3000 and running Leapp upgrade.
 echo "Setting LEAPP_OVL_SIZE=3000"
 export LEAPP_OVL_SIZE=3000
-
 echo "Beginning LEAPP Upgrade":
-
 leapp upgrade --reboot
-
 }
  
 count_el8_packages()
