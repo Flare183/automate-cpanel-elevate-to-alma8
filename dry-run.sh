@@ -40,16 +40,16 @@ else
   echo "Please proceed with Stage 1"
   ;;
   "Stage 1 completed")
-  echo "Upgrade in process, please proceed with Stage 2"
+  echo "Upgrade in progress, please proceed with Stage 2"
   ;;
   "Stage 2 completed")
-  echo "Upgrade in process, please proceed with Stage 2"
+  echo "Upgrade in progress, please proceed with Stage 3 (pre-flight checks)"
   ;;
   "Stage 3 completed")
-  echo "Upgrade in process, please proceed with Stage 4"
+  echo "Please fix pre-flight checks and proceed with Stage 4"
   ;;
   "Stage 4 completed")
-  echo "Upgrade in process, please proceed with Stage 5"
+  echo "elevate-cpanel is in progress please proceed with Stage 5 once it is finished"
   ;;
   esac
 fi
