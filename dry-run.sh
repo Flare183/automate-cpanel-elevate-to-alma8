@@ -233,11 +233,10 @@ while getopts ":hps:-:" opt; do
                     ;;
                 esac
                 ;;
-
-        *)
-          echo "Error: Invalid option: --$OPTARG"
-          exit 1
-          ;;
+            *)
+              echo "Error: Invalid option: --$OPTARG"
+              exit 1
+              ;;
     esac;;
     \?)
       echo "Invalid option: -$OPTARG"
