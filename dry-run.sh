@@ -30,10 +30,10 @@ touch $EL8_PACKAGES
 
 if [[ ! -s ${LOCK_FILE} ]]
 then
-  echo "Starting a new dry-run test"
+  echo "Starting a new dry-run test at $(date)"  2>&1 | tee -a $LOG
+  echo "$(date) Upgrade paths, lock-file, and log-file have been setup"  2>&1 | tee -a $LOG
+  echo "Proceeding with Stage 1"  2>&1 | tee -a $LOG 
   echo "Stage 0 completed" > $LOCK_FILE
-  echo "$(date) Upgrade paths, lock-file, and log-file have been setup" | tee -a $LOG
-  echo "Please proceed with Stage 1"
 else
   case $(cat $LOCK_FILE) in
   "Stage 0 completed")
@@ -102,29 +102,34 @@ stage_2()
     do
       yum-config-manager --disable "$repo" | grep -E 'repo:|enabled' | tee -a $LOG;
     done
-    
+#Removing LW-provided centos-release
     echo -e "Removing LW-provided centos-release...\n" | tee -a $LOG
     rpm -e --nodeps centos-release
-
-    #Getting ready for stage 3
+#Installing CentOS7-provided centos-release and updating packages
+    yum -y install http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-9.2009.0.el7.centos.x86_64.rpm | tee -a $LOG
+    yum update -y | tee -a $LOG
+    sleep 5
+#Getting ready for pre-flight checks
     echo "Stage 2 completed" > $LOCK_FILE
-
-    yum -y install http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-9.2009.0.el7.centos.x86_64.rpm | tee -a $LOG; yum update -y | tee -a $LOG && sleep 5 && echo "Yum updates completed, moving on to pre-flight checks" >> /etc/motd && reboot
+    echo "Stage 2 completed, moving on to pre-flight checks" >> /etc/motd
+    reboot
 } 
 
 stage_3()
 {
+#Running the LW upgrade pre-flight checks
      echo -e "Downloading and running LW and cPanel pre-flight checks:\n" | tee -a $LOG
      bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) | tee -a $LOG
+#Downloading elevate-cpanel
      wget -O /scripts/elevate-cpanel https://raw.githubusercontent.com/cpanel/elevate/release/elevate-cpanel; chmod 700 /scripts/elevate-cpanel
      echo -e "Disabling /var/cpanel/elevate-noc-recommendations" | tee -a $LOG
+#Disabling /var/cpanel/elevate-noc-recommendations 
      mv /var/cpanel/elevate-noc-recommendations{,.disabled}
-     
+#Running cPanel preflight-checks: 
      echo -e "Running cPanel Pre-flight check...\n" | tee -a $LOG
     /scripts/elevate-cpanel --check | tee -a $LOG
      echo -e "\nPlease manualy address the upgrade blockers" | tee -a $LOG
      echo "Stage 3 completed" > $LOCK_FILE
-
 }
 
 stage_4()
@@ -167,11 +172,15 @@ count_el8_packages()
 }
 
 #Check whether any options were passed to the script
-while getopts ":hs:-:" opt; do
+while getopts ":h:ps:-:" opt; do
   case $opt in
     h)
       print_usage
       exit;;
+    p)
+      echo "Counting el7/el8 packages"
+      count_el8_packages
+      ;;
     s) #Select a specific stage of the script
         case "${OPTARG}" in
             1)
