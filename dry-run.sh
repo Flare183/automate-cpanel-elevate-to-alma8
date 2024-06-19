@@ -119,7 +119,7 @@ stage_3()
 {
 #Running the LW upgrade pre-flight checks
      echo -e "Downloading and running LW and cPanel pre-flight checks:\n" | tee -a $LOG
-     bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) | tee -a $LOG
+     bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/elevate_preflight.sh) | tee -a $PRE_FLIGHT_LOG
 #Downloading elevate-cpanel
      wget -O /scripts/elevate-cpanel https://raw.githubusercontent.com/cpanel/elevate/release/elevate-cpanel; chmod 700 /scripts/elevate-cpanel
      echo -e "Disabling /var/cpanel/elevate-noc-recommendations" | tee -a $LOG
@@ -127,7 +127,7 @@ stage_3()
      mv /var/cpanel/elevate-noc-recommendations{,.disabled}
 #Running cPanel preflight-checks: 
      echo -e "Running cPanel Pre-flight check...\n" | tee -a $LOG
-    /scripts/elevate-cpanel --check | tee -a $LOG
+    /scripts/elevate-cpanel --check 2>&1 | tee -a $PRE_FLIGHT_LOG
      echo -e "\nPlease manualy address the upgrade blockers" | tee -a $LOG
      echo "Stage 3 completed" > $LOCK_FILE
 }
