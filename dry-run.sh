@@ -215,7 +215,7 @@ while getopts ":hps:-:" opt; do
         case "${OPTARG}" in
             help)
                 print_usage
-                exit;;
+                ;;
             stage)
                 echo "Stage"
                 case "${OPTARG}" in
