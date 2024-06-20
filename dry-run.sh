@@ -134,11 +134,12 @@ stage_3()
 
 stage_4()
 {
+#Installing LW post-leapp script:
 bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_leapp.sh)
+#Running cPanel elevate-cpanel without leapp:
 /scripts/elevate-cpanel --start --non-interactive --no-leapp
 }
 
-#Stage5 waits while '/scripts/elevate-cpanel --start --non-interactive -no-leapp' runs
 stage_5()
 {
 #Setting up Alma8 elevate repo + leapp upgrades packages
