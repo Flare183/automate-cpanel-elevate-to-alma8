@@ -128,7 +128,7 @@ stage_3()
 #Running cPanel Pre-flight check
   echo -e "Running cPanel Pre-flight check...\n" | tee -a $LOG
   /scripts/elevate-cpanel --check | tee -a $PRE_FLIGHT_LOG
-  echo -e "\nPlease manualy address the upgrade blockers" | tee -a $LOG
+  echo -e "\nPlease manually address the upgrade blockers" | tee -a $LOG
   echo "Stage 3 completed" > $LOCK_FILE
 }
 
