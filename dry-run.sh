@@ -127,7 +127,7 @@ stage_3()
      mv /var/cpanel/elevate-noc-recommendations{,.disabled}
 #Running cPanel preflight-checks: 
     echo -e "Running cPanel Pre-flight check...\n" | tee -a $LOG
-    /scripts/elevate-cpanel --check 2>&1 | tee -a $PRE_FLIGHT_LOG
+    /scripts/elevate-cpanel --check | tee -a $PRE_FLIGHT_LOG
     echo -e "\nPlease manualy address the upgrade blockers" | tee -a $LOG
     echo "Stage 3 completed" > $LOCK_FILE
 }
