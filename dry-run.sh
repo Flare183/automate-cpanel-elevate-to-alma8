@@ -5,10 +5,10 @@
 set -u
 
 #Setting up log files
-LOCK_FILE=/tmp/dry-run.lock
-LOG=/tmp/staging.log
-PRE_FLIGHT_LOG=/tmp/lw-preflight-checks.log
-EL8_PACKAGES=/tmp/el8_packages.log
+LOCK_FILE=/etc/elevate.lock
+LOG=/etc/staging.log
+PRE_FLIGHT_LOG=/etc/lw-preflight-checks.log
+EL8_PACKAGES=/etc/el8_packages.log
 
 #Print command usage
 print_usage()
@@ -154,7 +154,7 @@ stage_3()
 stage_4()
 {
 #Installing LW post-leapp script:
-bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_leapp.sh) tee -a $LOG
+bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_leapp.sh)  | tee -a $LOG
 #Running cPanel elevate-cpanel without leapp:
 /scripts/elevate-cpanel --start --non-interactive --no-leapp
 }
