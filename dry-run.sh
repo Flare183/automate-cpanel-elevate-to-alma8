@@ -124,7 +124,7 @@ stage_3()
   wget -O /scripts/elevate-cpanel https://raw.githubusercontent.com/cpanel/elevate/release/elevate-cpanel; chmod 700 /scripts/elevate-cpanel
   echo -e "Disabling /var/cpanel/elevate-noc-recommendations" | tee -a $LOG
 #Disabling /var/cpanel/elevate-noc-recommendations 
-  mv /var/cpanel/elevate-noc-recommendations{,.disabled}
+  #mv /var/cpanel/elevate-noc-recommendations{,.disabled}
   echo -e "Running cPanel Pre-flight check...\n" | tee -a $LOG
   /scripts/elevate-cpanel --check | tee -a $PRE_FLIGHT_LOG
   echo -e "\nPlease manualy address the upgrade blockers" | tee -a $LOG
@@ -133,10 +133,8 @@ stage_3()
 
 stage_4()
 {
-
 bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_leapp.sh)
 /scripts/elevate-cpanel --start --non-interactive --no-leapp
-
 }
 
 #Stage5 waits while '/scripts/elevate-cpanel --start --non-interactive -no-leapp' runs
