@@ -125,6 +125,7 @@ stage_3()
   echo -e "Disabling /var/cpanel/elevate-noc-recommendations" | tee -a $LOG
 #Disabling /var/cpanel/elevate-noc-recommendations 
   mv /var/cpanel/elevate-noc-recommendations{,.disabled} > /dev/null 2>&1
+  
   echo -e "Running cPanel Pre-flight check...\n" | tee -a $LOG
   /scripts/elevate-cpanel --check | tee -a $PRE_FLIGHT_LOG
   echo -e "\nPlease manualy address the upgrade blockers" | tee -a $LOG
