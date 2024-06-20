@@ -10,7 +10,6 @@ LOG=/tmp/dry-run.log
 PRE_FLIGHT_LOG=/tmp/lw-preflight-checks.log
 EL8_PACKAGES=/tmp/el8_packages.log
 
-
 print_usage()
 {
 echo "This script is used to automate and accelerate the staging dry-run process"
@@ -30,9 +29,9 @@ touch $EL8_PACKAGES
 
 if [[ ! -s ${LOCK_FILE} ]]
 then
-  echo "Starting a new dry-run test at $(date)"  2>&1 | tee -a $LOG
-  echo "$(date) Upgrade paths, lock-file, and log-file have been setup"  2>&1 | tee -a $LOG
-  echo "Proceeding with Stage 1"  2>&1 | tee -a $LOG 
+  echo "Starting a new dry-run test at $(date)" | tee -a $LOG
+  echo "$(date) Upgrade paths, lock-file, and log-file have been setup" | tee -a $LOG
+  echo "Proceeding with Stage 1" | tee -a $LOG 
   echo "Stage 0 completed" > $LOCK_FILE
 else
   case $(cat $LOCK_FILE) in
@@ -81,20 +80,21 @@ stage_2()
 {
     echo -e "Adding default MariaDB/MySQL MySQL db data and restarting the service...\n" | tee -a $LOG
 #Check whether system is using MariaDB or MySQL, then setup default MySQL table accordingly
-    if [[ $(mysql -V | grep "MariaDB") ]];
+ if [[ $(mysql -V | grep "MariaDB") ]];
      then
         echo "This server uses MariaDB" | tee -a $LOG
-        mariadb_pid="$(systemctl status mysqld | grep "Main PID:" | awk '{print $3}')"; kill -9 "$mariadb_pid";
-        mysql_install_db --user=mysql;
+        mariadb_pid="$(systemctl status mysqld | grep "Main PID:" | awk '{print $3}')"
+        kill -9 "$mariadb_pid"
+        mysql_install_db --user=mysql | tee -a $LOG
+        echo -e "Restarting MariaDB...\n" | tee -a $LOG
      else
         echo "This server uses MySQL" | tee -a $LOG
-        echo -e '[mysqld]\nskip-grant-tables\n' > /etc/my.cnf;
-        mkdir /var/lib/mysql-files;
-        chown mysql: /var/lib/mysql-files;
-        chmod 750 /var/lib/mysql-files;
-        echo -e "Restarting MariaDB/MySQL...\n" | tee -a $LOG
+        echo -e '[mysqld]\nskip-grant-tables\n' > /etc/my.cnf
+        mkdir /var/lib/mysql-files
+        chown mysql: /var/lib/mysql-files
+        chmod 750 /var/lib/mysql-files
+        echo -e "Restarting MySQL...\n" | tee -a $LOG
      fi
-     
      systemctl restart mysqld || systemctl restart mariadb
 
     echo -e "Disabling LW-provided repos...\n" | tee -a $LOG
@@ -126,10 +126,10 @@ stage_3()
 #Disabling /var/cpanel/elevate-noc-recommendations 
      mv /var/cpanel/elevate-noc-recommendations{,.disabled}
 #Running cPanel preflight-checks: 
-     echo -e "Running cPanel Pre-flight check...\n" | tee -a $LOG
+    echo -e "Running cPanel Pre-flight check...\n" | tee -a $LOG
     /scripts/elevate-cpanel --check 2>&1 | tee -a $PRE_FLIGHT_LOG
-     echo -e "\nPlease manualy address the upgrade blockers" | tee -a $LOG
-     echo "Stage 3 completed" > $LOCK_FILE
+    echo -e "\nPlease manualy address the upgrade blockers" | tee -a $LOG
+    echo "Stage 3 completed" > $LOCK_FILE
 }
 
 stage_4()
@@ -172,7 +172,7 @@ count_el8_packages()
 #Counting EL7/EL8 packages
   rpm -qa | grep -v cpanel | grep -Po 'el[78]' \
   | sort | uniq -c | sort -rn;echo;rpm -qa | grep -v cpanel \
-  | grep 'el7' | sort | uniq | sort -rn | nl > $EL8_PACKAGES >&1
+  | grep 'el7' | sort | uniq | sort -rn | nl | tee > $EL8_PACKAGES
 }
 
 #Check whether any options were passed to the script
