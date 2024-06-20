@@ -16,9 +16,9 @@ print_usage()
 echo "This script is used to automate and accelerate the staging dry-run process"
 echo "Syntax: dry-run.sh [-s|--stage -h|--help]"
 echo "Options:"
-echo "-s|--stage        Re-run a specific stage of the dry-run script"
+echo "-s|--stage        Run a specific stage of the dry-run script"
 echo "-h|--help         Print this help message"
-echo "-p|--packages     Calculate el7/el8 packages"
+echo "-p|--packages     Count el7/el8 packages and save the output to /tmp/el8_packages.log"
 }
 
 stage_0()
