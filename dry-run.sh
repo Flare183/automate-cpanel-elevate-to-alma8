@@ -30,10 +30,13 @@ touch $EL8_PACKAGES
 
 if [[ ! -s ${LOCK_FILE} ]]
 then
+  if [[ $(grep "CentOS" /etc/system-release) ]]
+  then
   echo "Starting a new dry-run test at $(date)" | tee -a $LOG
   echo "$(date) Upgrade paths, lock-file, and log-file have been setup" | tee -a $LOG
   echo "Proceeding with Stage 1" | tee -a $LOG 
   echo "Stage 0 completed" > $LOCK_FILE
+  fi
 else
   case $(cat $LOCK_FILE) in
   "Stage 0 completed")
