@@ -73,12 +73,29 @@ stage_1()
     systemctl mask plymouth-reboot.service | tee -a $LOG; systemctl daemon-reload | tee -a $LOG
     echo "Stage 1 completed" >> /etc/motd
     echo "Stage 1 completed" > $LOCK_FILE
+    sleep 10
     reboot
 }
 
 
 stage_2()
-{
+{  
+#Anticipating no route to host error that we've seen with dedicated servers"
+if [[ -f /etc/csf/csf.error ]]
+then
+#Removing /etc/csf/csf.error
+  echo "Removing /etc/csf/csf.error file" | tee -a $LOG
+  rm -v /etc/csf/csf.error
+#Loading iptables FILTER table
+  echo "Loading IPTABLES FILTER table" | tee -a $LOG
+  iptables -F
+#Restarting CSF + LFD
+  echo "Restarting CSF + LFD" | tee -a $LOG
+  csf -ra
+#Restarting CSF service
+  echo "Restarting CSF systemctl service" | tee -a $LOG
+  systemctl restart csf
+fi
     echo -e "Adding default MariaDB/MySQL MySQL db data and restarting the service...\n" | tee -a $LOG
 #Check whether system is using MariaDB or MySQL, then setup default MySQL table accordingly
  if [[ $(mysql -V | grep "MariaDB") ]];
@@ -130,6 +147,7 @@ stage_3()
   echo -e "Running cPanel Pre-flight check...\n" | tee -a $LOG
   /scripts/elevate-cpanel --check | tee -a $PRE_FLIGHT_LOG
   echo -e "\nPlease manually address the upgrade blockers" | tee -a $LOG
+  echo "Please address pre-flight warnings before moving on to Stage 4 and 5" >> /etc/motd
   echo "Stage 3 completed" > $LOCK_FILE
 }
 
@@ -246,5 +264,3 @@ while getopts ":hps:-:" opt; do
 done
 
 stage_0
-# echo -e "\nDry-run automatic steps have completed. Please manualy address the upgrade blockers" >> /etc/motd
-# cat /etc/motd
