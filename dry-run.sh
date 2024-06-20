@@ -124,7 +124,7 @@ stage_3()
   wget -O /scripts/elevate-cpanel https://raw.githubusercontent.com/cpanel/elevate/release/elevate-cpanel; chmod 700 /scripts/elevate-cpanel
   echo -e "Disabling /var/cpanel/elevate-noc-recommendations" | tee -a $LOG
 #Disabling /var/cpanel/elevate-noc-recommendations 
-  #mv /var/cpanel/elevate-noc-recommendations{,.disabled}
+  mv /var/cpanel/elevate-noc-recommendations{,.disabled} > /dev/null 2>&1
   echo -e "Running cPanel Pre-flight check...\n" | tee -a $LOG
   /scripts/elevate-cpanel --check | tee -a $PRE_FLIGHT_LOG
   echo -e "\nPlease manualy address the upgrade blockers" | tee -a $LOG
