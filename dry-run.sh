@@ -3,13 +3,14 @@
 #6/13/24
 
 set -u
-#Help utility
 
+#Setting up log files
 LOCK_FILE=/tmp/dry-run.lock
-LOG=/tmp/dry-run.log
+LOG=/tmp/staging.log
 PRE_FLIGHT_LOG=/tmp/lw-preflight-checks.log
 EL8_PACKAGES=/tmp/el8_packages.log
 
+#Print command usage
 print_usage()
 {
 echo "This script is used to automate and accelerate the staging dry-run process"
@@ -135,7 +136,7 @@ stage_3()
 stage_4()
 {
 #Installing LW post-leapp script:
-bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_leapp.sh)
+bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_leapp.sh) tee -a $LOG
 #Running cPanel elevate-cpanel without leapp:
 /scripts/elevate-cpanel --start --non-interactive --no-leapp
 }
@@ -143,26 +144,26 @@ bash <(curl -s https://files.liquidweb.com/support/elevate-scripts/install_post_
 stage_5()
 {
 #Setting up Alma8 elevate repo + leapp upgrades packages
-echo "cPanel elevate script completed successfully:" 
-echo "Installing AlmaLinux8 elevate repo:"
-yum install -y https://repo.almalinux.org/elevate/elevate-release-latest-el7.noarch.rpm
-echo "Installing leapp-upgrade and leapp-data-almalinux"
-yum install -y leapp-upgrade leapp-data-almalinux
+echo "cPanel elevate script completed successfully:" | tee -a $LOG
+echo "Installing AlmaLinux8 elevate repo:" | tee -a $LOG
+yum install -y https://repo.almalinux.org/elevate/elevate-release-latest-el7.noarch.rpm | tee -a $LOG
+echo "Installing leapp-upgrade and leapp-data-almalinux" | tee -a $LOG
+yum install -y leapp-upgrade leapp-data-almalinux | tee -a $LOG
 
 #Setting up Leapp Answer file and logs
-echo "Setting up /var/log/leaap and Leapp Answerfile"
-mkdir -pv /var/log/leapp
+echo "Setting up /var/log/leaap and Leapp Answerfile" | tee -a $LOG
+mkdir -pv /var/log/leapp | tee -a $LOG
 touch /var/log/leapp/answerfile
 echo '[remove_pam_pkcs11_module_check]' >> /var/log/leapp/answerfile
-leapp answer --section remove_pam_pkcs11_module_check.confirm=True
+leapp answer --section remove_pam_pkcs11_module_check.confirm=True | tee -a $LOG
 
 #Removing kernel-devel packages
 rpm -q kernel-devel &>/dev/null && rpm -q kernel-devel | xargs rpm -e --nodeps
 
 #Setting LEAPP_OVL_SIZE=3000 and running Leapp upgrade.
-echo "Setting LEAPP_OVL_SIZE=3000"
+echo "Setting LEAPP_OVL_SIZE=3000" | tee -a $LOG
 export LEAPP_OVL_SIZE=3000
-echo "Beginning LEAPP Upgrade":
+echo "Beginning LEAPP Upgrade": | tee -a $LOG
 leapp upgrade --reboot
 }
  
