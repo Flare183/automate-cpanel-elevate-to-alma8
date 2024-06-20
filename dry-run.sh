@@ -2,7 +2,7 @@
 #Automating dry-run upgrade steps by Alex Silkin
 #6/13/24
 
-set -eu
+set -u
 #Help utility
 
 LOCK_FILE=/tmp/dry-run.lock
@@ -124,8 +124,8 @@ stage_3()
   wget -O /scripts/elevate-cpanel https://raw.githubusercontent.com/cpanel/elevate/release/elevate-cpanel; chmod 700 /scripts/elevate-cpanel
   echo -e "Disabling /var/cpanel/elevate-noc-recommendations" | tee -a $LOG
 #Disabling /var/cpanel/elevate-noc-recommendations 
-  mv /var/cpanel/elevate-noc-recommendations{,.disabled} > /dev/null 2>&1
-  
+  mv -v /var/cpanel/elevate-noc-recommendations{,.disabled} > /dev/null 2>&1
+#Running cPanel Pre-flight check
   echo -e "Running cPanel Pre-flight check...\n" | tee -a $LOG
   /scripts/elevate-cpanel --check | tee -a $PRE_FLIGHT_LOG
   echo -e "\nPlease manualy address the upgrade blockers" | tee -a $LOG
