@@ -36,6 +36,7 @@ then
     echo "$(date) Upgrade paths, lock-file, and log-file have been setup" | tee -a $LOG
     echo "Proceeding with Stage 1" | tee -a $LOG 
     echo "Stage 0 completed" > $LOCK_FILE
+    stage_1
   fi
 else
   case $(cat $LOCK_FILE) in
@@ -74,6 +75,10 @@ stage_1()
 
 #Mask plymouth-reboot service
     systemctl mask plymouth-reboot.service | tee -a $LOG; systemctl daemon-reload | tee -a $LOG
+
+#
+    echo "HWADDR=$(ip -brief link | grep eth0 | awk '{print $3}')" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+
     echo "Stage 1 completed" >> /etc/motd
     echo "Stage 1 completed" > $LOCK_FILE
     sleep 10
@@ -127,7 +132,9 @@ fi
     echo -e "Removing LW-provided centos-release...\n" | tee -a $LOG
     rpm -e --nodeps centos-release
 #Installing CentOS7-provided centos-release and updating packages
-    yum -y install http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-9.2009.0.el7.centos.x86_64.rpm | tee -a $LOG
+    yum install -y https://vault.centos.org/7.9.2009/os/x86_64/Packages/centos-release-7-9.2009.0.el7.centos.x86_64.rpm \
+    || yum install -y https://archive.kernel.org/centos-vault/7.9.2009/os/x86_64/Packages/centos-release-7-9.2009.0.el7.centos.x86_64.rpm
+wget -O /etc/yum.repos.d/CentOS-Base.repo https://files.liquidweb.com/support/elevate-scripts/CentOS-Base.repo | tee -a $LOG
     yum update -y | tee -a $LOG
     sleep 5
 #Getting ready for pre-flight checks
